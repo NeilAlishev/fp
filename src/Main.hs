@@ -12,7 +12,12 @@ data TermS = SymS Symbol        -- x
 -- (1)
 -- переименовать все переменные так, чтобы все они были разными.
 alpha :: TermS -> TermS
-alpha = error "Implement me!"
+
+alpha (SymS sym) = SymS sym
+alpha (LamS sym term) = _convert (LamS sym term)
+alpha (AppS term1 term2) = AppS (alpha term1) (alpha term2)
+
+-- first go max deep. then start change names
 
 -- (1)
 -- один шаг редукции, если это возможно. Стратегия вычислений - полная, т.е. редуцируются все возможные редексы.
@@ -109,6 +114,7 @@ data TermP = TermP TermS
            -- mutually recursive
            -- (7)
            | Cons TermP TermP
+           | Nil
            | IsNil TermP
            | Head TermP
            | Tail TermP
