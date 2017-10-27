@@ -1,5 +1,22 @@
+-- TODO: declare signatures for all functions
+-- TODO: refactor the code when all done
+-- TODO: refactor everything using lambda@ syntax
+-- Example:
+-- _reduce (AppS term1 term2) lam@(LamS sym term) = AppS (_reduce term1 term2) lam
+-- TODO: refactor everything using guards
+-- bmiTell bmi
+--     | bmi <= 18.5 = "You're underweight, you emo, you!"
+--     | bmi <= 25.0 = "You're supposedly normal. Pffft, I bet you're ugly!"
+--     | bmi <= 30.0 = "You're fat! Lose some weight, fatty!"
+--     | otherwise   = "You're a whale, congratulations!"
+
+-- also can be inline:
+-- max' a b | a > b = a | otherwise = b
+
 module Main where
 import Data.Maybe
+import Data.Unique
+import System.IO.Unsafe (unsafePerformIO)
 
 newtype Symbol = Symbol { unSymbol :: String } deriving (Eq,Show,Read)
 
@@ -11,13 +28,27 @@ data TermS = SymS Symbol        -- x
 
 -- (1)
 -- переименовать все переменные так, чтобы все они были разными.
+-- first go max deep, then start changing variable names
 alpha :: TermS -> TermS
-
 alpha (SymS sym) = SymS sym
-alpha (LamS sym term) = _convert (LamS sym term)
 alpha (AppS term1 term2) = AppS (alpha term1) (alpha term2)
+alpha (LamS sym term) =
+  let new_sym_name = get_unique_sym sym
+  in LamS new_sym_name (_change (alpha term) sym new_sym_name)
 
--- first go max deep. then start change names
+_change (SymS sym) sym_to_change new_sym_name
+  | sym == sym_to_change = (SymS new_sym_name)
+  | otherwise = SymS sym
+_change (AppS term1 term2) sym_to_change new_sym_name =
+  AppS (_change term1 sym_to_change new_sym_name) (_change term2 sym_to_change new_sym_name)
+
+_change (LamS sym term) sym_to_change new_sym_name =
+  LamS sym (_change term sym_to_change new_sym_name)
+
+get_unique_sym :: Symbol -> Symbol
+get_unique_sym (Symbol x) =
+    let unique = unsafePerformIO newUnique
+    in Symbol (x ++ show (hashUnique unique))
 
 -- (1)
 -- один шаг редукции, если это возможно. Стратегия вычислений - полная, т.е. редуцируются все возможные редексы.
@@ -86,12 +117,18 @@ sym x = SymS (Symbol x)
 lam x t = LamS (Symbol x) t
 app t1 t2 = AppS t1 t2
 
--- test terms
-test_term1 = lam "x" $ app (app (lam "t" $ lam "f" $ sym "t") (sym "x")) (lam "z" $ sym "z")
-test_term2 = lam "x" $ app (lam "f" $ sym "x") (lam "z" $ sym "z")
-test_term3 = app (lam "x" $ sym "s") (sym "f")
-test_term4 = (lam "x" $ sym "x")
-test_term5 = app (app (lam "x" $ lam "f" $ sym "f") (sym "x1")) (app (lam "x" $ lam "f" $ sym "x") (sym "x1"))
+test_term_alpha1 = lam "x" $ lam "y" $ (app (sym "x") (sym "y"))
+-- test term from the repo
+test_term_alpha2 = lam "x" $ lam "x" $ lam "x" $ app (app (app (lam "b" $ lam "f" $ lam "s" $ app (app (sym "b") (sym "f")) (sym "s")) (lam "x" $ lam "y" $ sym "x")) (lam "x" $ sym "x")) (lam "x" $ lam "y" $ sym "y")
+
+test_term_beta1 = lam "x" $ app (app (lam "t" $ lam "f" $ sym "t") (sym "x")) (lam "z" $ sym "z")
+test_term_beta2 = lam "x" $ app (lam "f" $ sym "x") (lam "z" $ sym "z")
+test_term_beta3 = app (lam "x" $ sym "s") (sym "f")
+test_term_beta4 = (lam "x" $ sym "x")
+test_term_beta5 = app (app (lam "x" $ lam "f" $ sym "f") (sym "x1")) (app (lam "x" $ lam "f" $ sym "x") (sym "x1"))
+
+-- test term from the repo
+-- test_term_beta6 =
 
 -- apply beta function until it returns 'Nothing'
 full_beta :: TermS -> TermS
@@ -114,7 +151,7 @@ data TermP = TermP TermS
            -- mutually recursive
            -- (7)
            | Cons TermP TermP
-           | Nil
+           | Nil -- для пустого списка
            | IsNil TermP
            | Head TermP
            | Tail TermP
@@ -133,7 +170,7 @@ one = lam "s" $ lam "z" $ app (app (app scc zero) (sym "s")) (sym "z") -- works!
 two = lam "s" $ lam "z" $ app (app (app scc one) (sym "s")) (sym "z") -- works!
 
 -- TODO: implement toTermS (Natural x) using recursion and scc function
--- TODO: declare signatures for all functions
+-- TODO: here return something like lam s $ lam z $ app (sym s) (sym z) = 1
 
 -- convert natural number to the Church numeral
 -- toTermS (Natural x) =
