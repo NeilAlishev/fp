@@ -128,7 +128,7 @@ test_term_beta4 = (lam "x" $ sym "x")
 test_term_beta5 = app (app (lam "x" $ lam "f" $ sym "f") (sym "x1")) (app (lam "x" $ lam "f" $ sym "x") (sym "x1"))
 
 -- test term from the repo
--- test_term_beta6 =
+test_term_beta6 = lam "a" $ lam "b" $ lam "c" $ app (app (app (lam "d" $ lam "e" $ lam "f" $ app (app (sym "d") (sym "e")) (sym "f")) (lam "g" $ lam "h" $ sym "g")) (lam "i" $ sym "i")) (lam "j" $ lam "k" $ sym "k")
 
 -- apply beta function until it returns 'Nothing'
 full_beta :: TermS -> TermS
