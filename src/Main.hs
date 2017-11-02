@@ -84,7 +84,6 @@ _beta (AppS term1 term2) = _reduce term1 term2
 
 -- we can't reduce this right away
 _reduce (AppS term1 term2) (LamS sym term) = AppS (_reduce term1 term2) (LamS sym term)
-_reduce (LamS sym term) (AppS term1 term2) = AppS (LamS sym term) (_reduce term1 term2)
 _reduce (AppS term1 term2) (SymS sym) = AppS (_reduce term1 term2) (SymS sym)
 _reduce (SymS sym) (AppS term1 term2) = AppS (SymS sym) (_reduce term1 term2) -- this should go to _reduce Sym Sym
 _reduce (AppS first_term1 first_term2) (AppS second_term1 second_term2) =
@@ -97,6 +96,7 @@ _reduce (SymS s1) (SymS s2) = AppS (SymS s1) (SymS s2)
 -- we can reduce this
 _reduce (LamS sym term) (SymS arg) = _apply_sym term (SymS sym) (SymS arg)
 _reduce (LamS sym term) (LamS sym_arg term_arg) = _apply_lam term (SymS sym) (LamS sym_arg term_arg)
+_reduce (LamS sym term) (AppS term1 term2) = _apply_app term (SymS sym) (AppS term1 term2)
 
 _apply_sym :: TermS -> TermS -> TermS -> TermS
 _apply_sym (SymS current_sym) (SymS sym) (SymS arg) =
@@ -126,6 +126,21 @@ _apply_lam (LamS current_sym term) (SymS sym) (LamS sym_arg term_arg) =
 -- traverse inside
 _apply_lam (AppS term1 term2) (SymS sym) (LamS sym_arg term_arg) =
     AppS (_apply_lam term1 (SymS sym) (LamS sym_arg term_arg)) (_apply_lam term2 (SymS sym) (LamS sym_arg term_arg))
+
+_apply_app :: TermS -> TermS -> TermS -> TermS
+_apply_app (SymS current_sym) (SymS sym) (AppS term1 term2) =
+    -- apply app
+    if current_sym == sym
+        then AppS term1 term2
+    else
+        SymS current_sym
+
+-- traverse inside
+_apply_app (LamS current_sym term) (SymS sym) (AppS term_arg1 term_arg2) =
+    LamS current_sym (_apply_app term (SymS sym) (AppS term_arg1 term_arg2))
+-- traverse inside
+_apply_app (AppS term1 term2) (SymS sym) (AppS term_arg1 term_arg2) =
+    AppS (_apply_app term1 (SymS sym) (AppS term_arg1 term_arg2)) (_apply_app term2 (SymS sym) (AppS term_arg1 term_arg2))
 
 -- let
 sym x = SymS (Symbol x)
@@ -177,7 +192,7 @@ test_term6 = Plus (Natural 1) (Natural 2)
 
 zero = lam "s" $ lam "z" $ sym "z"
 scc = lam "n" $ lam "s" $ lam "z" $ app (sym "s") (app (app (sym "n") (sym "s")) (sym "z"))
-plus = lam "x" $ lam "y" $ lam "s" $ lam "z" $ app (sym "x") (app (sym "s") (app (app (sym "y") (sym "s")) (sym "z")))
+plus = lam "x" $ lam "y" $ lam "s" $ lam "z" $ app (app (sym "x") (sym "s")) (app (app (sym "y") (sym "s")) (sym "z"))
 
 one = lam "s" $ lam "z" $ app (app (app scc zero) (sym "s")) (sym "z") -- works!
 two = lam "s" $ lam "z" $ app (app (app scc one) (sym "s")) (sym "z") -- works!
@@ -187,15 +202,13 @@ toTermS :: TermP -> TermS
 -- convert natural number to the Church numeral
 toTermS (Natural x) = full_beta (_toTermS 0 x zero)
 toTermS (Plus x1 x2) = full_beta (app (app (app (app plus (toTermS x1)) (toTermS x2)) (sym "s")) (sym "z"))
+-- toTermS (Mult x1 x2) =
 
 _toTermS current_num target_num current_church_num
   | current_num == target_num = current_church_num
   | current_num < target_num =
     let next_church_num = lam "s" $ lam "z" $ app (app (app scc current_church_num) (sym "s")) (sym "z")
     in _toTermS (current_num + 1) target_num next_church_num
-
-
--- toTermS (Mult x1 x2) =
 
 solve :: TermP -> Maybe TermS
 solve termP = beta (alpha (toTermS termP))
