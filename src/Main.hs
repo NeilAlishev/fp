@@ -24,7 +24,22 @@ newtype Symbol = Symbol { unSymbol :: String } deriving (Eq,Show,Read)
 data TermS = SymS Symbol        -- x
            | LamS Symbol TermS  -- \x -> t
            | AppS TermS TermS   -- t1 t2
-           deriving (Eq,Show,Read) -- ПОСМОТРЕТЬ КАК РАБОТАЕТ READ с коммандной строки
+           deriving (Eq,Read) -- ПОСМОТРЕТЬ КАК РАБОТАЕТ READ с коммандной строки, TEMPORARY DELETED SHOW
+
+-- TEMPORARY SHOW - for debugging
+instance (Show TermS) where
+    show (SymS x) = sq (show (unSymbol x))
+    show (LamS sym term) = "λ" ++ sq (show (unSymbol sym)) ++ "." ++ (show term)
+    show (AppS term1 term2) = (show term1) ++ " " ++ (show term2)
+
+-- remove double quotes
+sq :: String -> String
+sq s@[c]                     = s
+sq ('"':s)  | last s == '"'  = init s
+            | otherwise      = s
+sq ('\'':s) | last s == '\'' = init s
+            | otherwise      = s
+sq s                         = s
 
 -- (1)
 -- переименовать все переменные так, чтобы все они были разными.
