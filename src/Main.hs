@@ -188,12 +188,15 @@ data TermP = TermP TermS
            deriving (Eq,Show,Read)
 
 -- we can perform arithmetic operations only on Church numerals, not on arbitrary lambda expressions
-test_term6 = Plus (Natural 1) (Natural 2)
+test_term6 = Plus (Natural 2) (Natural 2)
+test_term7 = Mult (Natural 3) (Natural 3)
 
 zero = lam "s" $ lam "z" $ sym "z"
 scc = lam "n" $ lam "s" $ lam "z" $ app (sym "s") (app (app (sym "n") (sym "s")) (sym "z"))
 plus = lam "x" $ lam "y" $ lam "s" $ lam "z" $ app (app (sym "x") (sym "s")) (app (app (sym "y") (sym "s")) (sym "z"))
+times = lam "x" $ lam "y" $ lam "s" $ lam "z" $ app (app (sym "x") (app (sym "y") (sym "s"))) (sym "z")
 
+-- testing Church numerals
 one = lam "s" $ lam "z" $ app (app (app scc zero) (sym "s")) (sym "z") -- works!
 two = lam "s" $ lam "z" $ app (app (app scc one) (sym "s")) (sym "z") -- works!
 
@@ -201,8 +204,8 @@ toTermS :: TermP -> TermS
 
 -- convert natural number to the Church numeral
 toTermS (Natural x) = full_beta (_toTermS 0 x zero)
-toTermS (Plus x1 x2) = full_beta (app (app (app (app plus (toTermS x1)) (toTermS x2)) (sym "s")) (sym "z"))
--- toTermS (Mult x1 x2) =
+toTermS (Plus x1 x2) = lam "s" $ lam "z" $ full_beta (app (app (app (app plus (toTermS x1)) (toTermS x2)) (sym "s")) (sym "z"))
+toTermS (Mult x1 x2) = lam "s" $ lam "z" $ full_beta (app (app (app (app times (toTermS x1)) (toTermS x2)) (sym "s")) (sym "z"))
 
 _toTermS current_num target_num current_church_num
   | current_num == target_num = current_church_num
