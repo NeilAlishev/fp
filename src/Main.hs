@@ -162,17 +162,16 @@ test_term6 = Plus (Natural 1) (Natural 2)
 
 zero = lam "s" $ lam "z" $ sym "z"
 scc = lam "n" $ lam "s" $ lam "z" $ app (sym "s") (app (app (sym "n") (sym "s")) (sym "z"))
+plus = lam "x" $ lam "y" $ lam "s" $ lam "z" $ app (sym "x") (app (sym "s") (app (app (sym "y") (sym "s")) (sym "z")))
 
 one = lam "s" $ lam "z" $ app (app (app scc zero) (sym "s")) (sym "z") -- works!
 two = lam "s" $ lam "z" $ app (app (app scc one) (sym "s")) (sym "z") -- works!
-
--- TODO: implement toTermS (Natural x) using recursion and scc function
--- TODO: here return something like lam s $ lam z $ app (sym s) (sym z) = 1
 
 toTermS :: TermP -> TermS
 
 -- convert natural number to the Church numeral
 toTermS (Natural x) = full_beta (_toTermS 0 x zero)
+toTermS (Plus x1 x2) = full_beta (app (app (app (app plus (toTermS x1)) (toTermS x2)) (sym "s")) (sym "z"))
 
 _toTermS current_num target_num current_church_num
   | current_num == target_num = current_church_num
@@ -180,7 +179,7 @@ _toTermS current_num target_num current_church_num
     let next_church_num = lam "s" $ lam "z" $ app (app (app scc current_church_num) (sym "s")) (sym "z")
     in _toTermS (current_num + 1) target_num next_church_num
 
--- toTermS (Plus x1 x2) = _sum_church_numbers (toTermS x1) (toTermS x2)
+
 -- toTermS (Mult x1 x2) =
 
 solve :: TermP -> Maybe TermS
