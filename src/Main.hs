@@ -90,8 +90,9 @@ _reduce (AppS first_term1 first_term2) (AppS second_term1 second_term2) =
     -- always reduce first application
     AppS (_reduce first_term1 first_term2) (AppS second_term1 second_term2)
 
--- this is for Church numerals where s and z are unknown
+-- can't reduce this, leave untouched
 _reduce (SymS s1) (SymS s2) = AppS (SymS s1) (SymS s2)
+_reduce (SymS s1) (LamS sym term) = AppS (SymS s1) (LamS sym term)
 
 -- we can reduce this
 _reduce (LamS sym term) (SymS arg) = _apply_sym term (SymS sym) (SymS arg)
@@ -180,6 +181,10 @@ data TermP = TermP TermS
            -- (5**) 50%
            -- mutually recursive
            -- (7)
+           | Boolean Bool
+           | Pair TermP TermP
+           | Fst TermP
+           | Snd TermP
            | Cons TermP TermP
            | Nil -- для пустого списка
            | IsNil TermP
@@ -197,15 +202,51 @@ plus = lam "x" $ lam "y" $ lam "s" $ lam "z" $ app (app (sym "x") (sym "s")) (ap
 times = lam "x" $ lam "y" $ lam "s" $ lam "z" $ app (app (sym "x") (app (sym "y") (sym "s"))) (sym "z")
 
 -- testing Church numerals
-one = lam "s" $ lam "z" $ app (app (app scc zero) (sym "s")) (sym "z") -- works!
-two = lam "s" $ lam "z" $ app (app (app scc one) (sym "s")) (sym "z") -- works!
+one = lam "s" $ lam "z" $ app (app (app scc zero) (sym "s")) (sym "z")
+two = lam "s" $ lam "z" $ app (app (app scc one) (sym "s")) (sym "z")
+
+-- list implementation
+
+pair' = lam "a" $ lam "b" $ lam "f" $ app (app (sym "f") (sym "a")) (sym "b")
+fst'  = lam "p" $ app (sym "p") (lam "a" $ lam "b" $ sym "a")
+snd'  = lam "p" $ app (sym "p") (lam "a" $ lam "b" $ sym "b")
+
+tru = lam "frst" $ lam "scnd" $ sym "frst"
+fls = lam "frst" $ lam "scnd" $ sym "scnd"
+
+nil' = Pair (Boolean True) (Boolean True)
+cons' h t = toTermS (Pair (Boolean False) (Pair h t))
+isNil' t = Fst t
+-- head' z = Fst (Snd z) fix Snd first
+-- tail' z = app (lam "z" $ Snd (Snd (sym "z"))) z
 
 toTermS :: TermP -> TermS
 
 -- convert natural number to the Church numeral
 toTermS (Natural x) = full_beta (_toTermS 0 x zero)
+
+-- arithmetic operations
 toTermS (Plus x1 x2) = lam "s" $ lam "z" $ full_beta (app (app (app (app plus (toTermS x1)) (toTermS x2)) (sym "s")) (sym "z"))
 toTermS (Mult x1 x2) = lam "s" $ lam "z" $ full_beta (app (app (app (app times (toTermS x1)) (toTermS x2)) (sym "s")) (sym "z"))
+
+-- implement pair
+toTermS (Pair term1 term2) = full_beta (app (app pair' (toTermS term1)) (toTermS term2))
+toTermS (Fst term) = full_beta (app fst' (toTermS term))
+toTermS (Snd term) = full_beta (app snd' (toTermS term))
+
+-- implement simple Boolean
+toTermS (Boolean val) =
+  if val
+    then tru
+  else
+    fls
+
+-- implement list
+toTermS Nil = full_beta (toTermS nil')
+toTermS (Cons term1 term2) = cons' term1 term2
+toTermS (IsNil term) = toTermS (isNil' $ term)
+-- toTermS (Head term) = toTermS (head' $ term) fix Snd first
+-- toTermS (Tail term) = full_beta (tail' $ toTermS term) Fst is potentially broken
 
 _toTermS current_num target_num current_church_num
   | current_num == target_num = current_church_num
