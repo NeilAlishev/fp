@@ -217,8 +217,8 @@ fls = lam "frst" $ lam "scnd" $ sym "scnd"
 nil' = Pair (Boolean True) (Boolean True)
 cons' h t = toTermS (Pair (Boolean False) (Pair h t))
 isNil' t = Fst t
--- head' z = Fst (Snd z) fix Snd first
--- tail' z = app (lam "z" $ Snd (Snd (sym "z"))) z
+head' z = Fst (Snd z)
+tail' z = Snd (Snd z)
 
 toTermS :: TermP -> TermS
 
@@ -231,8 +231,8 @@ toTermS (Mult x1 x2) = lam "s" $ lam "z" $ full_beta (app (app (app (app times (
 
 -- implement pair
 toTermS (Pair term1 term2) = full_beta (app (app pair' (toTermS term1)) (toTermS term2))
-toTermS (Fst term) = full_beta (app fst' (toTermS term))
-toTermS (Snd term) = full_beta (app snd' (toTermS term))
+toTermS (Fst term) = full_beta (app fst' (alpha (toTermS term)))
+toTermS (Snd term) = full_beta (app snd' (alpha (toTermS term)))
 
 -- implement simple Boolean
 toTermS (Boolean val) =
@@ -245,8 +245,8 @@ toTermS (Boolean val) =
 toTermS Nil = full_beta (toTermS nil')
 toTermS (Cons term1 term2) = cons' term1 term2
 toTermS (IsNil term) = toTermS (isNil' $ term)
--- toTermS (Head term) = toTermS (head' $ term) fix Snd first
--- toTermS (Tail term) = full_beta (tail' $ toTermS term) Fst is potentially broken
+toTermS (Head term) = toTermS (head' $ term)
+toTermS (Tail term) = toTermS (tail' $ term)
 
 _toTermS current_num target_num current_church_num
   | current_num == target_num = current_church_num
