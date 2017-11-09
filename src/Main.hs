@@ -1,18 +1,3 @@
--- TODO: declare signatures for all functions
--- TODO: refactor the code when all done
--- TODO: refactor everything using lambda@ syntax
--- Example:
--- _reduce (AppS term1 term2) lam@(LamS sym term) = AppS (_reduce term1 term2) lam
--- TODO: refactor everything using guards
--- bmiTell bmi
---     | bmi <= 18.5 = "You're underweight, you emo, you!"
---     | bmi <= 25.0 = "You're supposedly normal. Pffft, I bet you're ugly!"
---     | bmi <= 30.0 = "You're fat! Lose some weight, fatty!"
---     | otherwise   = "You're a whale, congratulations!"
-
--- also can be inline:
--- max' a b | a > b = a | otherwise = b
-
 module Main where
 import Data.Maybe
 import Data.Unique
@@ -24,28 +9,34 @@ newtype Symbol = Symbol { unSymbol :: String } deriving (Eq,Show,Read)
 data TermS = SymS Symbol        -- x
            | LamS Symbol TermS  -- \x -> t
            | AppS TermS TermS   -- t1 t2
-           deriving (Eq,Read) -- ПОСМОТРЕТЬ КАК РАБОТАЕТ READ с коммандной строки, TEMPORARY DELETED SHOW
+           deriving (Eq, Show, Read)
 
--- TEMPORARY SHOW - for debugging
-instance (Show TermS) where
-    show (SymS x) = sq (show (unSymbol x))
-    show (LamS sym term) = "λ" ++ sq (show (unSymbol sym)) ++ "." ++ (show term)
-    show (AppS term1 term2) = (show term1) ++ " " ++ (show term2)
+data TermI =
+      SymI Int
+    | LamI TermI
+    | AppI TermI TermI
+    deriving (Eq, Show, Read)
 
--- remove double quotes
-sq :: String -> String
-sq s@[c]                     = s
-sq ('"':s)  | last s == '"'  = init s
-            | otherwise      = s
-sq ('\'':s) | last s == '\'' = init s
-            | otherwise      = s
-sq s                         = s
+-- Show for debugging
+-- instance (Show TermS) where
+--     show (SymS x) = sq (show (unSymbol x))
+--     show (LamS sym term) = "λ" ++ sq (show (unSymbol sym)) ++ "." ++ (show term)
+--     show (AppS term1 term2) = (show term1) ++ " " ++ (show term2)
+
+-- remove quotes
+-- sq :: String -> String
+-- sq s@[c]                     = s
+-- sq ('"':s)  | last s == '"'  = init s
+--             | otherwise      = s
+-- sq ('\'':s) | last s == '\'' = init s
+--             | otherwise      = s
+-- sq s                         = s
 
 -- (1)
 -- переименовать все переменные так, чтобы все они были разными.
 -- first go max deep, then start changing variable names
 alpha :: TermS -> TermS
-alpha (SymS sym) = SymS sym
+alpha sym_arg@(SymS _) = sym_arg
 alpha (AppS term1 term2) = AppS (alpha term1) (alpha term2)
 alpha (LamS sym term) =
   let new_sym_name = get_unique_sym sym
@@ -78,34 +69,31 @@ beta termS = do
     else
         Just reduced_term
 
-_beta (SymS sym) = SymS sym
+_beta sym_arg@(SymS _) = sym_arg
 _beta (LamS sym term) = LamS sym (_beta term)
 _beta (AppS term1 term2) = _reduce term1 term2
 
 -- we can't reduce this right away
-_reduce (AppS term1 term2) (LamS sym term) = AppS (_reduce term1 term2) (LamS sym term)
-_reduce (AppS term1 term2) (SymS sym) = AppS (_reduce term1 term2) (SymS sym)
-_reduce (SymS sym) (AppS term1 term2) = AppS (SymS sym) (_reduce term1 term2) -- this should go to _reduce Sym Sym
+_reduce (AppS term1 term2) lam_arg@(LamS _ _) = AppS (_reduce term1 term2) lam_arg
+_reduce (AppS term1 term2) sym_arg@(SymS _) = AppS (_reduce term1 term2) sym_arg
+_reduce sym_arg@(SymS _) (AppS term1 term2) = AppS sym_arg (_reduce term1 term2) -- this should go to _reduce Sym Sym
 _reduce (AppS first_term1 first_term2) (AppS second_term1 second_term2) =
     -- always reduce first application
     AppS (_reduce first_term1 first_term2) (AppS second_term1 second_term2)
 
 -- can't reduce this, leave untouched
-_reduce (SymS s1) (SymS s2) = AppS (SymS s1) (SymS s2)
-_reduce (SymS s1) (LamS sym term) = AppS (SymS s1) (LamS sym term)
+_reduce sym_arg1@(SymS _) sym_arg2@(SymS _) = AppS sym_arg1 sym_arg2
+_reduce sym_arg@(SymS _) lam_arg@(LamS _ _) = AppS sym_arg lam_arg
 
 -- we can reduce this
-_reduce (LamS sym term) (SymS arg) = _apply_sym term (SymS sym) (SymS arg)
+_reduce (LamS sym term) sym_arg@(SymS _) = _apply_sym term (SymS sym) sym_arg
 _reduce (LamS sym term) (LamS sym_arg term_arg) = _apply_lam term (SymS sym) (LamS sym_arg term_arg)
-_reduce (LamS sym term) (AppS term1 term2) = _apply_app term (SymS sym) (AppS term1 term2)
+_reduce (LamS sym term) app_arg@(AppS _ _) = _apply_app term (SymS sym) app_arg
 
 _apply_sym :: TermS -> TermS -> TermS -> TermS
-_apply_sym (SymS current_sym) (SymS sym) (SymS arg) =
-    -- apply sym
-    if current_sym == sym
-        then SymS arg
-    else
-        SymS current_sym
+_apply_sym (SymS current_sym) (SymS sym) sym_arg@(SymS _)
+  | current_sym == sym = sym_arg
+  | otherwise = SymS current_sym
 
 -- traverse inside
 _apply_sym (LamS current_sym term) (SymS sym) (SymS arg) = LamS current_sym (_apply_sym term (SymS sym) (SymS arg))
@@ -114,12 +102,9 @@ _apply_sym (AppS term1 term2) (SymS sym) (SymS arg) =
     AppS (_apply_sym term1 (SymS sym) (SymS arg)) (_apply_sym term2 (SymS sym) (SymS arg))
 
 _apply_lam :: TermS -> TermS -> TermS -> TermS
-_apply_lam (SymS current_sym) (SymS sym) (LamS sym_arg term_arg) =
-    -- apply lam
-    if current_sym == sym
-        then LamS sym_arg term_arg
-    else
-        SymS current_sym
+_apply_lam (SymS current_sym) (SymS sym) lam_arg@(LamS _ _)
+  | current_sym == sym = lam_arg
+  | otherwise = SymS current_sym
 
 -- traverse inside
 _apply_lam (LamS current_sym term) (SymS sym) (LamS sym_arg term_arg) =
@@ -129,12 +114,9 @@ _apply_lam (AppS term1 term2) (SymS sym) (LamS sym_arg term_arg) =
     AppS (_apply_lam term1 (SymS sym) (LamS sym_arg term_arg)) (_apply_lam term2 (SymS sym) (LamS sym_arg term_arg))
 
 _apply_app :: TermS -> TermS -> TermS -> TermS
-_apply_app (SymS current_sym) (SymS sym) (AppS term1 term2) =
-    -- apply app
-    if current_sym == sym
-        then AppS term1 term2
-    else
-        SymS current_sym
+_apply_app (SymS current_sym) (SymS sym) app_arg@(AppS _ _)
+  | current_sym == sym = app_arg
+  | otherwise = SymS current_sym
 
 -- traverse inside
 _apply_app (LamS current_sym term) (SymS sym) (AppS term_arg1 term_arg2) =
@@ -161,7 +143,7 @@ test_term_beta5 = app (app (lam "x" $ lam "f" $ sym "f") (sym "x1")) (app (lam "
 -- test term from the repo
 test_term_beta6 = lam "a" $ lam "b" $ lam "c" $ app (app (app (lam "d" $ lam "e" $ lam "f" $ app (app (sym "d") (sym "e")) (sym "f")) (lam "g" $ lam "h" $ sym "g")) (lam "i" $ sym "i")) (lam "j" $ lam "k" $ sym "k")
 
--- apply beta function until it returns 'Nothing'
+-- apply beta function until it returns 'Nothing' (internal)
 full_beta :: TermS -> TermS
 full_beta term = do
     let reduced_term = beta term
@@ -170,6 +152,14 @@ full_beta term = do
         then term
     else
         full_beta (fromJust reduced_term)
+
+full :: (TermS -> a) -> (a -> Maybe a) -> TermS -> a
+full a b term = lastUnf 10000 b (a term)
+  where lastUnf :: Int -> (a -> Maybe a) -> a -> a
+        lastUnf 0 _ x = x
+        lastUnf n f x = case f x of
+          Nothing -> x
+          Just y -> lastUnf (n-1) f y
 
 data TermP = TermP TermS
            -- (4)
@@ -254,10 +244,10 @@ _toTermS current_num target_num current_church_num
     let next_church_num = lam "s" $ lam "z" $ app (app (app scc current_church_num) (sym "s")) (sym "z")
     in _toTermS (current_num + 1) target_num next_church_num
 
-solve :: TermP -> Maybe TermS
-solve termP = beta (alpha (toTermS termP))
+solve :: TermP -> Either TermI TermS
+solve = Right . full id (beta . alpha) . toTermS
 
 main :: IO ()
 main = do
-  s <- readLn
+  s <- read <$> getLine
   print $ solve s
