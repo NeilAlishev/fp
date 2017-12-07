@@ -7,7 +7,7 @@ type Symbol = String
 
 data Term
   = Sym Symbol                  -- x
-  | Lam Symbol Term             -- \x -> t
+  | Lam Symbol Type Term        -- \(x : T) -> t
   | App Term Term               -- t1 t2
   --
   | Natural Int                 -- 5

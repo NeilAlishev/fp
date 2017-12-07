@@ -1,9 +1,15 @@
 module Solution where
 
 import Types
+import PreviousSem
 
 typeOf :: Term -> Either String Type
-typeOf = error "Implement me!"
+
+-- perform alpha conversion to handle cases like Lam "x" Base (Lam "x" Base (Sym "x"))
+typeOf term = _typeOf (alpha term)
+
+_typeOf :: Term -> Either String Type
+_typeOf converted_term = Left "TODO"
 
 -- > typeOf $ Lam "x" $ Add (Sym "x") (Natural 5)
 -- Right (Fun Nat Nat)
