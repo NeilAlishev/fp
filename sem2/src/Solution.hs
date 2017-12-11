@@ -1,7 +1,20 @@
 module Solution where
 
+import Data.List
+
 import Types
 import PreviousSem
+
+data ContextElem = ContextElem { var :: String, varType :: Type } deriving (Eq, Show, Read)
+type Context = [ContextElem]
+
+addContextElem :: Context -> String -> Type -> Context
+addContextElem ctx var varType = (ContextElem var varType) : ctx
+
+getTypeFromContext :: Context -> String -> Maybe Type
+getTypeFromContext ctx varName = do
+    ctxElem <- find (\(ContextElem var _) -> var == varName) ctx
+    return (varType ctxElem) -- return automatically wraps (varType ctxElem) in Just
 
 typeOf :: Term -> Either String Type
 
