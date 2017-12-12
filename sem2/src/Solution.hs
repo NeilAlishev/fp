@@ -23,6 +23,8 @@ typeOf term = _typeOf (alpha term) []
 
 _typeOf :: Term -> Context -> Either String Type
 
+-- BASIC LAMBDA CALCULUS TYPES
+
 _typeOf (Sym x) ctx =
     case getTypeFromContext ctx x of
         Just var_type -> Right var_type
@@ -34,7 +36,6 @@ _typeOf (Lam sym sym_type term) ctx =
         Right var_type -> Right (Fun sym_type var_type)
         Left error -> Left error
 
--- TODO: haven't been tested yet
 _typeOf (App term1 term2) ctx =
     case term1Type of
         Right (Fun t1 t2) ->
@@ -48,6 +49,63 @@ _typeOf (App term1 term2) ctx =
             where term2Type = _typeOf term2 ctx
 
         Right _ -> Left "Fun type expected"
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
+
+-- BOOLEAN TYPES
+
+_typeOf (Boolean bool) ctx = Right Bool
+
+_typeOf (Not term) ctx =
+    case termType of
+        Right Bool -> Right Bool
+        Right _ -> Left "Not a Bool type inside Not"
+        Left error -> Left error
+    where termType = _typeOf term ctx
+
+_typeOf (And term1 term2) ctx =
+    case term1Type of
+        Right Bool ->
+            case term2Type of
+                Right Bool -> Right Bool
+                Right _ -> Left "Not a Bool type inside And"
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+        Right _ -> Left "Not a Bool type inside And"
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
+
+_typeOf (Or term1 term2) ctx =
+    case term1Type of
+        Right Bool ->
+            case term2Type of
+                Right Bool -> Right Bool
+                Right _ -> Left "Not a Bool type inside Or"
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+        Right _ -> Left "Not a Bool type inside Or"
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
+
+_typeOf (Iff term1 term2 term3) ctx =
+    case term1Type of
+        Right Bool ->
+            case term2Type of
+                Right t1 ->
+                    case term3Type of
+                        Right t2 ->
+                            if t1 == t2
+                                then Right t1
+                            else
+                                Left "If branches evaluate to different types"
+
+                        Left error -> Left error
+                    where term3Type = _typeOf term3 ctx
+
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+
+        Right _ -> Left "Not a Bool type inside If condition"
         Left error -> Left error
     where term1Type = _typeOf term1 ctx
 
