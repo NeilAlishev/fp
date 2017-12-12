@@ -19,10 +19,37 @@ getTypeFromContext ctx varName = do
 typeOf :: Term -> Either String Type
 
 -- perform alpha conversion to handle cases like Lam "x" Base (Lam "x" Base (Sym "x"))
-typeOf term = _typeOf (alpha term)
+typeOf term = _typeOf (alpha term) []
 
-_typeOf :: Term -> Either String Type
-_typeOf converted_term = Left "TODO"
+_typeOf :: Term -> Context -> Either String Type
+
+_typeOf (Sym x) ctx =
+    case getTypeFromContext ctx x of
+        Just var_type -> Right var_type
+        Nothing -> Left ("Variable " ++ x ++ " is of unknown type")
+
+_typeOf (Lam sym sym_type term) ctx =
+    let updatedContext = addContextElem ctx sym sym_type
+    in case _typeOf term updatedContext of
+        Right var_type -> Right (Fun sym_type var_type)
+        Left error -> Left error
+
+-- TODO: haven't been tested yet
+_typeOf (App term1 term2) ctx =
+    case term1Type of
+        Right (Fun t1 t2) ->
+            case term2Type of
+                Right t3 ->
+                    if t1 == t3
+                        then Right t2
+                    else
+                        Left "App type mismatch between parameter and argument"
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+
+        Right _ -> Left "Fun type expected"
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
 
 -- > typeOf $ Lam "x" $ Add (Sym "x") (Natural 5)
 -- Right (Fun Nat Nat)

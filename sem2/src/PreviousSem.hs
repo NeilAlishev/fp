@@ -13,6 +13,8 @@ alpha (Lam sym parameter_type term) =
   let new_sym_name = get_unique_sym sym
   in Lam new_sym_name parameter_type (_change (alpha term) sym new_sym_name)
 
+alpha otherTerm = otherTerm
+
 _change (Sym sym) sym_to_change new_sym_name
   | sym == sym_to_change = (Sym new_sym_name)
   | otherwise = Sym sym
@@ -21,6 +23,8 @@ _change (App term1 term2) sym_to_change new_sym_name =
 
 _change (Lam sym parameter_type term) sym_to_change new_sym_name =
   Lam sym parameter_type (_change term sym_to_change new_sym_name)
+
+_change otherTerm sym_to_change new_sym_name = otherTerm
 
 get_unique_sym :: Symbol -> Symbol
 get_unique_sym x =
