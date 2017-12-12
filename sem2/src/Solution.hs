@@ -139,7 +139,52 @@ _typeOf (Mult term1 term2) ctx =
         Left error -> Left error
     where term1Type = _typeOf term1 ctx
 
+-- PAIR TYPE
 
+_typeOf (Pair term1 term2) ctx =
+    case term1Type of
+        Right t1 ->
+            case term2Type of
+                Right t2 -> Right (PairT t1 t2)
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
+    -- check if term1 is correct, term2 is correct, return PairT with two types
+
+_typeOf (Fst term) ctx =
+    case termType of
+        Right (PairT t1 t2) -> Right t1
+        Right _ -> Left "Term in Fst should be a Pair"
+        Left error -> Left error
+    where termType = _typeOf term ctx
+    -- check if term is a pair, then return type of the first argument in pair
+
+_typeOf (Snd term) ctx =
+    case termType of
+        Right (PairT t1 t2) -> Right t2
+        Right _ -> Left "Term in Snd should be a Pair"
+        Left error -> Left error
+    where termType = _typeOf term ctx
+
+-- LIST TYPE
+
+-- _typeOf (Cons term1 term2) =
+    -- a -> [a] -> [a]
+
+_typeOf Nil ctx = Right (List Base)
+
+_typeOf (isNil term) ctx =
+    -- term should be of type List
+    -- this should evaluate to the type Bool
+
+_typeOf (Head term) ctx =
+    -- term should be of type List
+    -- this should evaluate to the type of the elements in the list.
+
+_typeOf (Tail term) ctx =
+    -- term should be of type List
+    -- this sholud evaluate to the type (List Type)
 
 -- > typeOf $ Lam "x" $ Add (Sym "x") (Natural 5)
 -- Right (Fun Nat Nat)
