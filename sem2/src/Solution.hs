@@ -109,6 +109,38 @@ _typeOf (Iff term1 term2 term3) ctx =
         Left error -> Left error
     where term1Type = _typeOf term1 ctx
 
+-- NUMERIC TYPES
+
+_typeOf (Natural n) ctx
+    | n > 0 = Right Nat
+    | otherwise = Left "Natural number should be greater than 0"
+
+_typeOf (Add term1 term2) ctx =
+    case term1Type of
+        Right Nat ->
+            case term2Type of
+                Right Nat -> Right Nat
+                Right _ -> Left "Not a Nat type inside Add"
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+        Right _ -> Left "Not a Nat type inside Add"
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
+
+_typeOf (Mult term1 term2) ctx =
+    case term1Type of
+        Right Nat ->
+            case term2Type of
+                Right Nat -> Right Nat
+                Right _ -> Left "Not a Nat type inside Mult"
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+        Right _ -> Left "Not a Nat type inside Mult"
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
+
+
+
 -- > typeOf $ Lam "x" $ Add (Sym "x") (Natural 5)
 -- Right (Fun Nat Nat)
 
