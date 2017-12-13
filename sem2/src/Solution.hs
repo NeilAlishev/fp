@@ -169,22 +169,45 @@ _typeOf (Snd term) ctx =
 
 -- LIST TYPE
 
--- _typeOf (Cons term1 term2) =
-    -- a -> [a] -> [a]
+-- 1 : [2,3] = [1,2,3]
+_typeOf (Cons term1 term2) ctx =
+    case term1Type of
+        Right t1 ->
+            case term2Type of
+                Right (List t2) ->
+                    if t1 == t2
+                        then Right (List t2)
+                    else
+                        Left "Element and List in Cons should be of the same type"
+                Right _ -> Left "Second argument in Cons should be a List"
+                Left error -> Left error
+            where term2Type = _typeOf term2 ctx
+        Left error -> Left error
+    where term1Type = _typeOf term1 ctx
 
-_typeOf Nil ctx = Right (List Base)
+_typeOf (Nil listType) ctx =
+    Right (List listType)
 
-_typeOf (isNil term) ctx =
-    -- term should be of type List
-    -- this should evaluate to the type Bool
+_typeOf (IsNil term) ctx =
+    case termType of
+        Right (List _) -> Right Bool
+        Right _ -> Left "Term in isNil should be a List"
+        Left error -> Left error
+    where termType = _typeOf term ctx
 
 _typeOf (Head term) ctx =
-    -- term should be of type List
-    -- this should evaluate to the type of the elements in the list.
+    case termType of
+        Right (List t1) -> Right t1
+        Right _ -> Left "Term in Head should be a List"
+        Left error -> Left error
+    where termType = _typeOf term ctx
 
 _typeOf (Tail term) ctx =
-    -- term should be of type List
-    -- this sholud evaluate to the type (List Type)
+    case termType of
+        Right (List t1) -> Right (List t1)
+        Right _ -> Left "Term in Tail should be a List"
+        Left error -> Left error
+    where termType = _typeOf term ctx
 
 -- > typeOf $ Lam "x" $ Add (Sym "x") (Natural 5)
 -- Right (Fun Nat Nat)
